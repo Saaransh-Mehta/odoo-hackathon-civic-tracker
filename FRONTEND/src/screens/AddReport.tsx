@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useUserReportsStore } from '../store/useUserReportsStore';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -50,6 +51,7 @@ const MapClickHandler: React.FC<MapClickHandlerProps> = ({ onLocationSelect }) =
 
 const AddReport = () => {
   const { isLoggedIn, user } = useAuthStore();
+  const { addReport } = useUserReportsStore();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -293,17 +295,29 @@ const AddReport = () => {
     setError('');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      console.log('Form submitted:', {
-        ...formData,
-        submittedBy: formData.isAnonymous ? 'Anonymous' : user?.name,
-        submittedAt: new Date().toISOString()
+      const imageUrls = formData.images.map((_, index) => 
+        `https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop&auto=format&q=80&${index}`
+      );
+
+      const reportId = addReport({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        status: 'pending',
+        location: formData.location!,
+        images: imageUrls,
+        isAnonymous: formData.isAnonymous,
+        submittedBy: formData.isAnonymous ? 'anonymous' : (user?.id || user?.name || 'unknown')
       });
+
+      console.log('Report submitted with ID:', reportId);
 
       navigate('/', { 
         state: { 
-          message: 'Issue reported successfully! Thank you for helping improve the community.' 
+          message: 'Issue reported successfully! Your report has been submitted and is now visible to the community.',
+          newReportId: reportId
         }
       });
     } catch (err) {

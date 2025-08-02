@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import type { UserRole } from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
+import { apiPost } from '../utils/api';
 
 const Login = () => {
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -66,19 +67,52 @@ const Login = () => {
     setError('');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (isLoginMode) {
+        const response = await apiPost('/v1/login', {
+          email: formData.email,
+          password: formData.password
+        });
 
-      const userData = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || formData.email.split('@')[0],
-        email: formData.email,
-        role: formData.role
-      };
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Login failed');
+        }
 
-      login(userData);
-      navigate('/');
+        const data = await response.json();
+        
+        const userData = {
+          id: data.user?.id || data.id || Math.random().toString(36).substr(2, 9),
+          name: data.user?.name || data.name || formData.email.split('@')[0],
+          email: data.user?.email || data.email || formData.email,
+          role: (data.user?.role || data.role || 'user') as UserRole
+        };
+
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+        }
+
+        login(userData);
+        navigate('/');
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const userData = {
+          id: Math.random().toString(36).substr(2, 9),
+          name: formData.name || formData.email.split('@')[0],
+          email: formData.email,
+          role: formData.role
+        };
+
+        login(userData);
+        navigate('/');
+      }
     } catch (err) {
-      setError('Authentication failed. Please try again.');
+      console.error('Authentication error:', err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Authentication failed. Please check your credentials and try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -101,19 +135,58 @@ const Login = () => {
     setError('');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const demoUser = {
-        id: 'demo-user-123',
-        name: 'Demo User',
+      const response = await apiPost('/v1/login', {
         email: 'demo@civictracker.com',
-        role: 'user' as const
-      };
+        password: 'demo123'
+      });
 
-      login(demoUser);
-      navigate('/');
+      if (response.ok) {
+        const data = await response.json();
+        
+        const userData = {
+          id: data.user?.id || data.id || 'demo-user-123',
+          name: data.user?.name || data.name || 'Demo User',
+          email: data.user?.email || data.email || 'demo@civictracker.com',
+          role: (data.user?.role || data.role || 'user') as UserRole
+        };
+
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+        }
+
+        login(userData);
+        navigate('/');
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const demoUser = {
+          id: 'demo-user-123',
+          name: 'Demo User',
+          email: 'demo@civictracker.com',
+          role: 'user' as const
+        };
+
+        login(demoUser);
+        navigate('/');
+      }
     } catch (err) {
-      setError('Demo login failed. Please try again.');
+      console.error('Demo login error:', err);
+      
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const demoUser = {
+          id: 'demo-user-123',
+          name: 'Demo User',
+          email: 'demo@civictracker.com',
+          role: 'user' as const
+        };
+
+        login(demoUser);
+        navigate('/');
+      } catch (fallbackErr) {
+        setError('Demo login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

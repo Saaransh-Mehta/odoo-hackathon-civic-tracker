@@ -1,110 +1,61 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
-import { useNavigate } from 'react-router-dom';
-
-interface Report {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  status: 'pending' | 'in-progress' | 'resolved' | 'rejected';
-  location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  images: string[];
-  submittedAt: string;
-  updatedAt: string;
-  isAnonymous: boolean;
-}
+import { useUserReportsStore, type UserReport } from '../store/useUserReportsStore';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ViewReport = () => {
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore();
+  const { getUserReports } = useUserReportsStore();
   const navigate = useNavigate();
-  const [reports, setReports] = useState<Report[]>([]);
+  const location = useLocation();
+  const [reports, setReports] = useState<UserReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'status'>('newest');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [newReportId, setNewReportId] = useState<string>('');
 
   useEffect(() => {
     if (isLoggedIn) {
       fetchUserReports();
     }
-  }, [isLoggedIn]);
+    
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      if (location.state?.newReportId) {
+        setNewReportId(location.state.newReportId);
+      }
+      
+      window.history.replaceState({}, document.title);
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+        setNewReportId('');
+      }, 5000);
+    }
+  }, [isLoggedIn, location.state]);
 
   const fetchUserReports = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const mockReports: Report[] = [
-        {
-          id: '1',
-          title: 'Broken streetlight on Main Street',
-          description: 'The streetlight has been flickering for weeks and finally went out completely. This creates a safety hazard for pedestrians walking at night.',
-          category: 'Street Lighting',
-          status: 'in-progress',
-          location: {
-            lat: 40.7580,
-            lng: -73.9855,
-            address: '123 Main Street, New York, NY 10001'
-          },
-          images: [
-            'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop',
-            'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop'
-          ],
-          submittedAt: '2025-01-28T10:30:00Z',
-          updatedAt: '2025-01-30T14:20:00Z',
-          isAnonymous: false
-        },
-        {
-          id: '2',
-          title: 'Pothole on Oak Avenue',
-          description: 'Large pothole causing damage to vehicles. Multiple cars have been affected.',
-          category: 'Road & Transportation',
-          status: 'resolved',
-          location: {
-            lat: 40.7505,
-            lng: -73.9934,
-            address: '456 Oak Avenue, New York, NY 10002'
-          },
-          images: [
-            'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop'
-          ],
-          submittedAt: '2025-01-25T16:45:00Z',
-          updatedAt: '2025-02-01T09:15:00Z',
-          isAnonymous: false
-        },
-        {
-          id: '3',
-          title: 'Overflowing trash bins in Central Park',
-          description: 'Multiple trash bins are overflowing, creating unsanitary conditions and attracting pests.',
-          category: 'Waste Management',
-          status: 'pending',
-          location: {
-            lat: 40.7829,
-            lng: -73.9654,
-            address: 'Central Park, New York, NY 10024'
-          },
-          images: [
-            'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&h=300&fit=crop'
-          ],
-          submittedAt: '2025-02-01T08:20:00Z',
-          updatedAt: '2025-02-01T08:20:00Z',
-          isAnonymous: true
-        }
-      ];
-
-      setReports(mockReports);
+      if (user?.id || user?.name) {
+        const userId = user.id || user.name;
+        const userReports = getUserReports(userId);
+        setReports(userReports);
+      } else {
+        setReports([]);
+      }
     } catch (error) {
       console.error('Failed to fetch reports:', error);
+      setReports([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: Report['status']) => {
+  const getStatusColor = (status: UserReport['status']) => {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -119,7 +70,7 @@ const ViewReport = () => {
     }
   };
 
-  const getStatusIcon = (status: Report['status']) => {
+  const getStatusIcon = (status: UserReport['status']) => {
     switch (status) {
       case 'pending':
         return (
@@ -198,11 +149,50 @@ const ViewReport = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-slate-800 mb-4">My Reports</h1>
+        <h1 className="text-4xl font-bold text-slate-800 mb-4">
+          My Reports
+          {reports.length > 0 && (
+            <span className="ml-3 text-2xl font-normal text-slate-500">
+              ({reports.length})
+            </span>
+          )}
+        </h1>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto">
           Track the status of your submitted civic issues and see how they're being addressed.
         </p>
       </div>
+
+      {successMessage && (
+        <div className={`bg-green-50 border border-green-200 rounded-lg p-4 ${newReportId ? 'animate-pulse' : ''}`}>
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm text-green-800">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {reports.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-slate-200 p-4 text-center">
+            <div className="text-2xl font-bold text-slate-800">{reports.length}</div>
+            <div className="text-sm text-slate-600">Total Reports</div>
+          </div>
+          <div className="bg-white rounded-lg border border-slate-200 p-4 text-center">
+            <div className="text-2xl font-bold text-yellow-600">{reports.filter(r => r.status === 'pending').length}</div>
+            <div className="text-sm text-slate-600">Pending</div>
+          </div>
+          <div className="bg-white rounded-lg border border-slate-200 p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{reports.filter(r => r.status === 'in-progress').length}</div>
+            <div className="text-sm text-slate-600">In Progress</div>
+          </div>
+          <div className="bg-white rounded-lg border border-slate-200 p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{reports.filter(r => r.status === 'resolved').length}</div>
+            <div className="text-sm text-slate-600">Resolved</div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
@@ -260,7 +250,7 @@ const ViewReport = () => {
                 : `No reports with status "${filter}" found.`}
             </p>
             <button
-              onClick={() => navigate('/add-report')}
+              onClick={() => navigate('/report')}
               className="px-6 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
             >
               Submit Your First Report

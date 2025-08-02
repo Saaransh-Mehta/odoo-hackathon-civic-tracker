@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCardStore } from '../store/useCardStore';
+import { useUserReportsStore } from '../store/useUserReportsStore';
+import { useLocation } from 'react-router-dom';
 import type { Issue } from '../types/issue';
 import Modal from '../components/Modal';
 import { Card } from '../components/Card';
@@ -14,7 +16,9 @@ interface Filters {
 
 const Home = () => {
   const { isLoggedIn, user } = useAuthStore();
-  const { openModal, closeModal } = useCardStore();
+  const { openModal } = useCardStore();
+  const { reports: userReports } = useUserReportsStore();
+  const location = useLocation();
   const [filters, setFilters] = useState<Filters>({
     category: '',
     status: '',
@@ -27,6 +31,7 @@ const Home = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string>('');
 
   const categories = [
     'All Categories',
@@ -295,7 +300,31 @@ const Home = () => {
 
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const filteredByLocation = filterIssuesByLocation(sampleIssues);
+      const convertedUserReports: Issue[] = userReports.map(report => ({
+        id: report.id,
+        title: report.title,
+        description: report.description,
+        category: report.category,
+        status: report.status === 'pending' ? 'Open' : 
+                report.status === 'in-progress' ? 'In Progress' : 
+                report.status === 'resolved' ? 'Resolved' : 'Closed',
+        location: report.location,
+        images: report.images,
+        image: report.images[0],
+        submittedAt: report.submittedAt,
+        updatedAt: report.updatedAt,
+        submittedBy: report.submittedBy,
+        isAnonymous: report.isAnonymous,
+        votes: Math.floor(Math.random() * 15) + 1,
+        priority: 'medium' as const,
+        distance: '0.2 km',
+        reportedDate: new Date(report.submittedAt).toLocaleDateString() === new Date().toLocaleDateString() 
+          ? 'Today' 
+          : `${Math.ceil((Date.now() - new Date(report.submittedAt).getTime()) / (1000 * 60 * 60 * 24))} days ago`
+      }));
+
+      const allIssues = [...convertedUserReports, ...sampleIssues];
+      const filteredByLocation = filterIssuesByLocation(allIssues);
       setIssues(filteredByLocation);
     } catch (err) {
       setError('Failed to fetch issues. Please try again.');
@@ -306,22 +335,16 @@ const Home = () => {
 
   useEffect(() => {
     fetchIssues();
-  }, [isLoggedIn]);
-
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'Open':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'In Progress':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Resolved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Closed':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+    
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      window.history.replaceState({}, document.title);
+      
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
     }
-  };
+  }, [isLoggedIn, location.state, userReports]);
 
   const filterIssues = (): Issue[] => {
     return issues.filter(issue => {
@@ -521,6 +544,17 @@ const Home = () => {
           </div>
         )}
       </div>
+
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm text-green-800">{successMessage}</span>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-end">
