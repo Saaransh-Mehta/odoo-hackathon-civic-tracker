@@ -11,6 +11,7 @@ const Login = () => {
     email: '',
     phone: '',
     password: '',
+    confirmPassword: '',
     role: 'user' as UserRole
   });
   const [loading, setLoading] = useState(false);
@@ -29,17 +30,24 @@ const Login = () => {
   };
 
   const validateForm = (): boolean => {
-    if (!formData.email?.trim() || !formData.password?.trim()) {
-      setError('Please fill in all required fields');
-      return false;
+    if (isLoginMode) {
+      if (!formData.username?.trim() || !formData.password?.trim()) {
+        setError('Please fill in all required fields');
+        return false;
+      }
+    } else {
+      if (!formData.email?.trim() || !formData.password?.trim()) {
+        setError('Please fill in all required fields');
+        return false;
+      }
     }
 
-    if (!isLoginMode && !formData.name?.trim()) {
+    if (!isLoginMode && !formData.username?.trim()) {
       setError('Please enter your name');
       return false;
     }
 
-    if (!isLoginMode && !formData.mobile?.trim()) {
+    if (!isLoginMode && !formData.phone?.trim()) {
       setError('Please enter your mobile number');
       return false;
     }
@@ -54,15 +62,15 @@ const Login = () => {
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-
     if (!isLoginMode) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError('Please enter a valid email address');
+        return false;
+      }
+
       const mobileRegex = /^[0-9]{10,15}$/;
-      if (!mobileRegex.test(formData.mobile.replace(/\s+/g, ''))) {
+      if (!mobileRegex.test(formData.phone.replace(/\s+/g, ''))) {
         setError('Please enter a valid mobile number (10-15 digits)');
         return false;
       }
@@ -82,18 +90,19 @@ const Login = () => {
     try {
       if (isLoginMode) {
         const response = await axios.get('https://odoo-hackathon-civic-tracker-5yfm.onrender.com/api/v1/login', {
-          params: {
-            email: formData.email,
+          data: {
+            username: formData.username,
             password: formData.password
           }
         });
 
         const data = response.data;
+        console.log(data)
         
         const userData = {
           id: data.user?.id || data.id || Math.random().toString(36).substr(2, 9),
-          name: data.user?.name || data.name || formData.email.split('@')[0],
-          email: data.user?.email || data.email || formData.email,
+          name: data.user?.name || data.name || formData.username,
+          email: data.user?.email || data.email || formData.email || '',
           role: (data.user?.role || data.role || 'user') as UserRole
         };
 
@@ -105,9 +114,9 @@ const Login = () => {
         navigate('/');
       } else {
         const response = await axios.post('https://odoo-hackathon-civic-tracker-5yfm.onrender.com/api/v1/register', {
-          name: formData.name,
+          username: formData.username,
           email: formData.email,
-          mobile: formData.mobile,
+          phone: formData.phone,
           password: formData.password
         });
 
@@ -115,7 +124,7 @@ const Login = () => {
         
         const userData = {
           id: data.user?.id || data.id || Math.random().toString(36).substr(2, 9),
-          name: data.user?.name || data.name || formData.name,
+          name: data.user?.name || data.name || formData.username,
           email: data.user?.email || data.email || formData.email,
           role: (data.user?.role || data.role || 'user') as UserRole
         };
@@ -144,9 +153,9 @@ const Login = () => {
   const toggleMode = () => {
     setIsLoginMode(!isLoginMode);
     setFormData({
-      name: '',
+      username: '',
       email: '',
-      mobile: '',
+      phone: '',
       password: '',
       confirmPassword: '',
       role: 'user'
@@ -160,8 +169,8 @@ const Login = () => {
 
     try {
       const response = await axios.get('https://odoo-hackathon-civic-tracker-5yfm.onrender.com/v1/login', {
-        params: {
-          email: 'demo@civictracker.com',
+        data: {
+          username: 'demouser',
           password: 'demo123'
         }
       });
@@ -227,16 +236,32 @@ const Login = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {!isLoginMode && (
+              {isLoginMode ? (
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-2">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-slate-700 placeholder-slate-400"
+                    placeholder="Enter your username"
+                    required
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-2">
                     Full Name
                   </label>
                   <input
                     type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
+                    id="username"
+                    name="username"
+                    value={formData.username}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-slate-700 placeholder-slate-400"
                     placeholder="Enter your full name"
@@ -247,14 +272,14 @@ const Login = () => {
 
               {!isLoginMode && (
                 <div>
-                  <label htmlFor="mobile" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">
                     Mobile Number
                   </label>
                   <input
                     type="tel"
-                    id="mobile"
-                    name="mobile"
-                    value={formData.mobile}
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-slate-700 placeholder-slate-400"
                     placeholder="Enter your mobile number"
@@ -263,21 +288,23 @@ const Login = () => {
                 </div>
               )}
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-slate-700 placeholder-slate-400"
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
+              {!isLoginMode && (
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-slate-700 placeholder-slate-400"
+                    placeholder="Enter your email"
+                    required={!isLoginMode}
+                  />
+                </div>
+              )}
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
