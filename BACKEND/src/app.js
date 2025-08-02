@@ -18,6 +18,11 @@ app.use(urlencoded({extended:true,limit:"20kb"}))
 app.use(json({limit:'20kb'}))
 app.use(cookieParser())
 app.use(fileUpload({ useTempFiles: true }));
+
+app.get("/",(req,res)=>{
+    res.send("hello World")
+})
+
 app.use("/api/v1",router)
 
 
