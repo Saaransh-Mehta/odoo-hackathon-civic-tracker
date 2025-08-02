@@ -1,29 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useCardStore } from '../store/useCardStore';
+import type { Issue } from '../types/issue';
 import Modal from '../components/Modal';
-
-interface Issue {
-  id: string | number;
-  title: string;
-  description: string;
-  category: string;
-  status: 'pending' | 'in-progress' | 'resolved' | 'rejected' | 'Open' | 'In Progress' | 'Resolved' | 'Closed';
-  location?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  images?: string[];
-  submittedAt?: string;
-  updatedAt?: string;
-  submittedBy?: string;
-  isAnonymous?: boolean;
-  votes?: number;
-  priority?: 'low' | 'medium' | 'high';
-  distance: string;
-  reportedDate: string;
-  image?: string;
-}
+import { Card } from '../components/Card';
+import { RecentCards } from '../components/RecentCards';
 
 interface Filters {
   category: string;
@@ -33,7 +14,7 @@ interface Filters {
 
 const Home = () => {
   const { isLoggedIn, user } = useAuthStore();
-  
+  const { openModal, closeModal } = useCardStore();
   const [filters, setFilters] = useState<Filters>({
     category: '',
     status: '',
@@ -46,8 +27,6 @@ const Home = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const categories = [
     'All Categories',
@@ -395,13 +374,7 @@ const Home = () => {
   };
 
   const handleIssueClick = (issue: Issue) => {
-    setSelectedIssue(issue);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedIssue(null);
+    openModal(issue);
   };
 
   const renderPaginationButtons = () => {
@@ -738,43 +711,11 @@ const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedIssues.map((issue) => (
-              <div 
-                key={issue.id} 
-                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer"
-                onClick={() => handleIssueClick(issue)}
-              >
-                <div className="aspect-video w-full">
-                  <img 
-                    src={issue.images?.[0] || "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=200&fit=crop&crop=entropy&auto=format"} 
-                    alt={issue.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
-                      {issue.category}
-                    </span>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-md border ${getStatusColor(issue.status)}`}>
-                      {issue.status}
-                    </span>
-                  </div>
-                  
-                  <h3 className="font-semibold text-slate-800 mb-2 line-clamp-2">
-                    {issue.title}
-                  </h3>
-                  
-                  <p className="text-sm text-slate-600 mb-4 line-clamp-3">
-                    {issue.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{issue.reportedDate}</span>
-                    <span className="font-medium text-slate-700">{issue.distance} away</span>
-                  </div>
-                </div>
-              </div>
+              <Card
+                key={issue.id}
+                card={issue}
+                onClick={handleIssueClick}
+              />
             ))}
           </div>
 
@@ -818,11 +759,18 @@ const Home = () => {
         </>
       )}
 
-      <Modal 
-        issue={selectedIssue} 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal} 
-      />
+      {/* Main content with sidebar */}
+      <div className="flex gap-6">
+        {/* Sidebar with recent cards */}
+        <div className="hidden lg:block w-80 flex-shrink-0">
+          <RecentCards limit={3} />
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1">
+          <Modal />
+        </div>
+      </div>
     </div>
   );
 };

@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useCardStore } from '../store/useCardStore';
+import type { Issue } from '../types/issue';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -10,53 +12,58 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-interface Issue {
-  id: string | number;
-  title: string;
-  description: string;
-  category: string;
-  status: 'pending' | 'in-progress' | 'resolved' | 'rejected' | 'Open' | 'In Progress' | 'Resolved' | 'Closed';
-  location?: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  images?: string[];
-  submittedAt?: string;
-  updatedAt?: string;
-  submittedBy?: string;
-  isAnonymous?: boolean;
-  votes?: number;
-  priority?: 'low' | 'medium' | 'high';
-  distance: string;
-  reportedDate: string;
-  image?: string;
-}
-
 interface ModalProps {
-  issue: Issue | null;
-  isOpen: boolean;
-  onClose: () => void;
+  // Optional props for backward compatibility
+  issue?: Issue | null;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
+const Modal: React.FC<ModalProps> = ({ issue: propIssue, isOpen: propIsOpen, onClose: propOnClose }) => {
+  const { 
+    selectedCard, 
+    isModalOpen, 
+    closeModal, 
+    clearSelectedCard, 
+    addToHistory, 
+    updateCardVotes 
+  } = useCardStore();
+
+  // Use store values as primary, props as fallback for backward compatibility
+  const issue = propIssue || selectedCard;
+  const isOpen = propIsOpen !== undefined ? propIsOpen : isModalOpen;
+  const handleClose = propOnClose || closeModal;
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
 
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
+      
+      // Add to history when modal opens
+      if (issue) {
+        addToHistory(issue);
+      }
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose, issue, addToHistory]);
+
+  // Handle voting functionality
+  const handleVote = (increment: boolean) => {
+    if (!issue || typeof issue.votes !== 'number') return;
+    
+    const newVotes = increment ? issue.votes + 1 : Math.max(0, issue.votes - 1);
+    updateCardVotes(issue.id, newVotes);
+  };
 
   if (!isOpen || !issue) {
     return null;
@@ -65,13 +72,17 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
   const getStatusColor = (status: Issue['status']) => {
     switch (status) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Open':
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'in-progress':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'In Progress':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'resolved':
+      case 'Resolved':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case 'Closed':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -93,24 +104,28 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
   const getStatusIcon = (status: Issue['status']) => {
     switch (status) {
       case 'pending':
+      case 'Open':
         return (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
       case 'in-progress':
+      case 'In Progress':
         return (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         );
       case 'resolved':
+      case 'Resolved':
         return (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         );
       case 'rejected':
+      case 'Closed':
         return (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -133,15 +148,13 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center">
         <div
-          className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
-          onClick={onClose}
+          className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
+          onClick={handleClose}
         />
 
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-
-        <div className="inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
+        <div className="relative inline-block w-full max-w-4xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl z-10">
           <div className="flex items-start justify-between mb-6">
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-slate-800 mb-2">{issue.title}</h2>
@@ -151,12 +164,14 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
                   <span className="capitalize">{issue.status.replace('-', ' ')}</span>
                 </div>
                 
-                <div className={`flex items-center space-x-1 px-3 py-1 rounded-full border text-sm font-medium ${getPriorityColor(issue.priority)}`}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="capitalize">{issue.priority} Priority</span>
-                </div>
+                {issue.priority && (
+                  <div className={`flex items-center space-x-1 px-3 py-1 rounded-full border text-sm font-medium ${getPriorityColor(issue.priority)}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="capitalize">{issue.priority} Priority</span>
+                  </div>
+                )}
 
                 <div className="flex items-center space-x-1 px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +183,7 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 ml-4 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -184,24 +199,40 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
                 <p className="text-slate-700 leading-relaxed">{issue.description}</p>
               </div>
 
-              {issue.images && issue.images.length > 0 && (
+              {((issue.images && issue.images.length > 0) || issue.image) && (
                 <div>
                   <h3 className="text-lg font-semibold text-slate-800 mb-3">Images</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {issue.images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image}
-                          alt={`Issue image ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-50 rounded-lg">
-                          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                          </svg>
-                        </div>
-                      </div>
-                    ))}
+                    {issue.images && issue.images.length > 0 
+                      ? issue.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={image}
+                              alt={`Issue image ${index + 1}`}
+                              className="w-full h-32 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-50 rounded-lg">
+                              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                              </svg>
+                            </div>
+                          </div>
+                        ))
+                      : issue.image && (
+                          <div className="relative group col-span-2">
+                            <img
+                              src={issue.image}
+                              alt="Issue image"
+                              className="w-full h-48 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-50 rounded-lg">
+                              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                              </svg>
+                            </div>
+                          </div>
+                        )
+                    }
                   </div>
                 </div>
               )}
@@ -315,6 +346,31 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
 
           <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center space-x-4">
+              {/* Voting Section */}
+              {typeof issue.votes === 'number' && (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-slate-100 rounded-lg">
+                  <button
+                    onClick={() => handleVote(true)}
+                    className="flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-full transition-colors"
+                    title="Upvote"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                  </button>
+                  <span className="px-2 text-sm font-medium text-slate-700">{issue.votes}</span>
+                  <button
+                    onClick={() => handleVote(false)}
+                    className="flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                    title="Downvote"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
               <button className="flex items-center space-x-2 px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
@@ -331,7 +387,7 @@ const Modal: React.FC<ModalProps> = ({ issue, isOpen, onClose }) => {
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
             >
               Close
