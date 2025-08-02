@@ -759,14 +759,11 @@ const Home = () => {
         </>
       )}
 
-      {/* Main content with sidebar */}
       <div className="flex gap-6">
-        {/* Sidebar with recent cards */}
         <div className="hidden lg:block w-80 flex-shrink-0">
           <RecentCards limit={3} />
         </div>
 
-        {/* Main content */}
         <div className="flex-1">
           <Modal />
         </div>

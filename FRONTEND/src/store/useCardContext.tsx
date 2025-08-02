@@ -8,7 +8,6 @@ interface CardContextType {
   isModalOpen: boolean;
   cardHistory: Issue[];
   
-  // Actions
   selectCard: (card: Issue) => void;
   openModal: (card: Issue) => void;
   closeModal: () => void;
@@ -36,7 +35,6 @@ export const CardProvider: React.FC<CardProviderProps> = ({ children }) => {
   };
 
   const removeFromHistory = (cardId: string | number) => {
-    // Update the store to remove from history
     useCardStore.setState((state) => ({
       cardHistory: state.cardHistory.filter(card => card.id !== cardId)
     }));
@@ -64,7 +62,6 @@ export const useCard = () => {
   return context;
 };
 
-// Custom hook for card operations
 export const useCardOperations = () => {
   const cardStore = useCardStore();
   

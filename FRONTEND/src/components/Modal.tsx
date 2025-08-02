@@ -13,7 +13,6 @@ L.Icon.Default.mergeOptions({
 });
 
 interface ModalProps {
-  // Optional props for backward compatibility
   issue?: Issue | null;
   isOpen?: boolean;
   onClose?: () => void;
@@ -29,7 +28,6 @@ const Modal: React.FC<ModalProps> = ({ issue: propIssue, isOpen: propIsOpen, onC
     updateCardVotes 
   } = useCardStore();
 
-  // Use store values as primary, props as fallback for backward compatibility
   const issue = propIssue || selectedCard;
   const isOpen = propIsOpen !== undefined ? propIsOpen : isModalOpen;
   const handleClose = propOnClose || closeModal;
@@ -45,7 +43,6 @@ const Modal: React.FC<ModalProps> = ({ issue: propIssue, isOpen: propIsOpen, onC
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
       
-      // Add to history when modal opens
       if (issue) {
         addToHistory(issue);
       }
@@ -57,7 +54,6 @@ const Modal: React.FC<ModalProps> = ({ issue: propIssue, isOpen: propIsOpen, onC
     };
   }, [isOpen, handleClose, issue, addToHistory]);
 
-  // Handle voting functionality
   const handleVote = (increment: boolean) => {
     if (!issue || typeof issue.votes !== 'number') return;
     
@@ -346,7 +342,6 @@ const Modal: React.FC<ModalProps> = ({ issue: propIssue, isOpen: propIsOpen, onC
 
           <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-200">
             <div className="flex items-center space-x-4">
-              {/* Voting Section */}
               {typeof issue.votes === 'number' && (
                 <div className="flex items-center space-x-2 px-3 py-2 bg-slate-100 rounded-lg">
                   <button

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type { Issue } from '../types/issue';
 
-// Re-export Issue type for convenience
 export type { Issue } from '../types/issue';
 
 interface CardState {
@@ -9,7 +8,6 @@ interface CardState {
   isModalOpen: boolean;
   cardHistory: Issue[];
   
-  // Actions
   selectCard: (card: Issue) => void;
   openModal: (card: Issue) => void;
   closeModal: () => void;
@@ -49,22 +47,19 @@ export const useCardStore = create<CardState>((set) => ({
 
   addToHistory: (card) =>
     set((state) => {
-      // Avoid duplicates in history
       const existingIndex = state.cardHistory.findIndex(
         (historyCard) => historyCard.id === card.id
       );
       
       if (existingIndex !== -1) {
-        // Move to front if already exists
         const updatedHistory = [...state.cardHistory];
         updatedHistory.splice(existingIndex, 1);
         updatedHistory.unshift(card);
-        return { cardHistory: updatedHistory.slice(0, 10) }; // Keep only last 10
+        return { cardHistory: updatedHistory.slice(0, 10) };
       }
       
-      // Add to front
       return {
-        cardHistory: [card, ...state.cardHistory].slice(0, 10), // Keep only last 10
+        cardHistory: [card, ...state.cardHistory].slice(0, 10),
       };
     }),
 
