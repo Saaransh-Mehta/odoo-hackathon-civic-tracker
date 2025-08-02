@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import type { UserRole } from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
-import { apiPost } from '../utils/api';
+import axios from 'axios';
 
 const Login = () => {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
+    phone: '',
     password: '',
-    confirmPassword: '',
     role: 'user' as UserRole
   });
   const [loading, setLoading] = useState(false);
@@ -29,13 +29,18 @@ const Login = () => {
   };
 
   const validateForm = (): boolean => {
-    if (!formData.email || !formData.password) {
+    if (!formData.email?.trim() || !formData.password?.trim()) {
       setError('Please fill in all required fields');
       return false;
     }
 
-    if (!isLoginMode && !formData.name) {
+    if (!isLoginMode && !formData.name?.trim()) {
       setError('Please enter your name');
+      return false;
+    }
+
+    if (!isLoginMode && !formData.mobile?.trim()) {
+      setError('Please enter your mobile number');
       return false;
     }
 
@@ -55,6 +60,14 @@ const Login = () => {
       return false;
     }
 
+    if (!isLoginMode) {
+      const mobileRegex = /^[0-9]{10,15}$/;
+      if (!mobileRegex.test(formData.mobile.replace(/\s+/g, ''))) {
+        setError('Please enter a valid mobile number (10-15 digits)');
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -68,17 +81,14 @@ const Login = () => {
 
     try {
       if (isLoginMode) {
-        const response = await apiPost('/v1/login', {
-          email: formData.email,
-          password: formData.password
+        const response = await axios.get('https://odoo-hackathon-civic-tracker-5yfm.onrender.com/api/v1/login', {
+          params: {
+            email: formData.email,
+            password: formData.password
+          }
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Login failed');
-        }
-
-        const data = await response.json();
+        const data = response.data;
         
         const userData = {
           id: data.user?.id || data.id || Math.random().toString(36).substr(2, 9),
@@ -94,21 +104,34 @@ const Login = () => {
         login(userData);
         navigate('/');
       } else {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        const userData = {
-          id: Math.random().toString(36).substr(2, 9),
-          name: formData.name || formData.email.split('@')[0],
+        const response = await axios.post('https://odoo-hackathon-civic-tracker-5yfm.onrender.com/api/v1/register', {
+          name: formData.name,
           email: formData.email,
-          role: formData.role
+          mobile: formData.mobile,
+          password: formData.password
+        });
+
+        const data = response.data;
+        
+        const userData = {
+          id: data.user?.id || data.id || Math.random().toString(36).substr(2, 9),
+          name: data.user?.name || data.name || formData.name,
+          email: data.user?.email || data.email || formData.email,
+          role: (data.user?.role || data.role || 'user') as UserRole
         };
+
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+        }
 
         login(userData);
         navigate('/');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Authentication error:', err);
-      if (err instanceof Error) {
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else if (err.message) {
         setError(err.message);
       } else {
         setError('Authentication failed. Please check your credentials and try again.');
@@ -123,6 +146,7 @@ const Login = () => {
     setFormData({
       name: '',
       email: '',
+      mobile: '',
       password: '',
       confirmPassword: '',
       role: 'user'
@@ -135,40 +159,28 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await apiPost('/v1/login', {
-        email: 'demo@civictracker.com',
-        password: 'demo123'
+      const response = await axios.get('https://odoo-hackathon-civic-tracker-5yfm.onrender.com/v1/login', {
+        params: {
+          email: 'demo@civictracker.com',
+          password: 'demo123'
+        }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        const userData = {
-          id: data.user?.id || data.id || 'demo-user-123',
-          name: data.user?.name || data.name || 'Demo User',
-          email: data.user?.email || data.email || 'demo@civictracker.com',
-          role: (data.user?.role || data.role || 'user') as UserRole
-        };
+      const data = response.data;
+      
+      const userData = {
+        id: data.user?.id || data.id || 'demo-user-123',
+        name: data.user?.name || data.name || 'Demo User',
+        email: data.user?.email || data.email || 'demo@civictracker.com',
+        role: (data.user?.role || data.role || 'user') as UserRole
+      };
 
-        if (data.token) {
-          localStorage.setItem('authToken', data.token);
-        }
-
-        login(userData);
-        navigate('/');
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const demoUser = {
-          id: 'demo-user-123',
-          name: 'Demo User',
-          email: 'demo@civictracker.com',
-          role: 'user' as const
-        };
-
-        login(demoUser);
-        navigate('/');
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
       }
+
+      login(userData);
+      navigate('/');
     } catch (err) {
       console.error('Demo login error:', err);
       
@@ -228,6 +240,24 @@ const Login = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-slate-700 placeholder-slate-400"
                     placeholder="Enter your full name"
+                    required={!isLoginMode}
+                  />
+                </div>
+              )}
+
+              {!isLoginMode && (
+                <div>
+                  <label htmlFor="mobile" className="block text-sm font-medium text-slate-700 mb-2">
+                    Mobile Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="mobile"
+                    name="mobile"
+                    value={formData.mobile}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-slate-500 transition-all duration-200 text-slate-700 placeholder-slate-400"
+                    placeholder="Enter your mobile number"
                     required={!isLoginMode}
                   />
                 </div>
