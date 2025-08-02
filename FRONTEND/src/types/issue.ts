@@ -13,10 +13,15 @@ export interface Issue {
   submittedAt?: string;
   updatedAt?: string;
   submittedBy?: string;
+  assignedTo?: string;
   isAnonymous?: boolean;
   votes?: number;
   priority?: 'low' | 'medium' | 'high';
   distance: string;
   reportedDate: string;
   image?: string;
+  isSpam?: boolean;
+  isInvalid?: boolean;
+  moderatedBy?: string;
+  moderatedAt?: string;
 }

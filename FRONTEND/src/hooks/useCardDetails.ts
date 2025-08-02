@@ -1,9 +1,6 @@
 import { useCardStore } from '../store/useCardStore';
 import type { Issue } from '../types/issue';
 
-/**
- * Custom hook for common card operations and utilities
- */
 export const useCardDetails = () => {
   const {
     selectedCard,
@@ -18,7 +15,6 @@ export const useCardDetails = () => {
     updateCardVotes,
   } = useCardStore();
 
-  // Quick card actions
   const viewCard = (card: Issue) => {
     openModal(card);
   };
@@ -28,7 +24,6 @@ export const useCardDetails = () => {
     addToHistory(card);
   };
 
-  // Card status helpers
   const isCardActive = (card: Issue) => {
     return card.status === 'Open' || card.status === 'pending';
   };
@@ -41,7 +36,6 @@ export const useCardDetails = () => {
     return card.priority || 'medium';
   };
 
-  // Card interaction helpers
   const voteOnCard = (cardId: string | number, increment: boolean = true) => {
     const card = selectedCard || cardHistory.find((c: Issue) => c.id === cardId);
     if (!card || typeof card.votes !== 'number') return false;
@@ -55,7 +49,6 @@ export const useCardDetails = () => {
     updateCardStatus(cardId, newStatus);
   };
 
-  // History helpers
   const getRecentCards = (limit: number = 5) => {
     return cardHistory.slice(0, limit);
   };
@@ -70,7 +63,6 @@ export const useCardDetails = () => {
     }));
   };
 
-  // Card data helpers
   const getCardSummary = (card: Issue) => ({
     id: card.id,
     title: card.title,
@@ -118,32 +110,26 @@ export const useCardDetails = () => {
   };
 
   return {
-    // State
     selectedCard,
     isModalOpen,
     cardHistory,
     
-    // Actions
     viewCard,
     quickView,
     closeModal,
     clearSelectedCard,
     
-    // Status helpers
     isCardActive,
     isCardResolved,
     getCardPriority,
     
-    // Interaction helpers
     voteOnCard,
     changeCardStatus,
     
-    // History helpers
     getRecentCards,
     hasViewedCard,
     removeFromHistory,
     
-    // Data helpers
     getCardSummary,
     formatCardDistance,
     formatCardDate,

@@ -30,12 +30,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {isLoggedIn ? (
                 <>
                   <div className="hidden md:flex items-center text-sm text-slate-600 mr-6">
-                    <div className="w-6 h-6 bg-slate-300 rounded-full flex items-center justify-center mr-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 ${
+                      user?.role === 'admin' ? 'bg-red-300' : 'bg-slate-300'
+                    }`}>
                       <span className="text-xs font-medium text-slate-700">
                         {user?.name?.charAt(0)?.toUpperCase()}
                       </span>
                     </div>
-                    <span>Welcome, {user?.name}</span>
+                    <div className="flex flex-col">
+                      <span>Welcome, {user?.name}</span>
+                      {user?.role === 'admin' && (
+                        <span className="text-xs text-red-600 font-medium">Admin</span>
+                      )}
+                    </div>
                   </div>
 
                   <Link
@@ -59,7 +66,32 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   >
                     My Reports
                   </Link>
-                  
+
+                  {user?.role === 'admin' && (
+                    <>
+                      <Link
+                        to="/admin/dashboard"
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          location.pathname === "/admin/dashboard" 
+                            ? "bg-red-600 text-white shadow-sm" 
+                            : "text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200"
+                        }`}
+                      >
+                        Admin Panel
+                      </Link>
+                      
+                      <Link
+                        to="/admin/reports"
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          location.pathname === "/admin/reports" 
+                            ? "bg-red-600 text-white shadow-sm" 
+                            : "text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200"
+                        }`}
+                      >
+                        Manage Reports
+                      </Link>
+                    </>
+                  )}
                  
 
                   <div className="ml-4 pl-4 border-l border-slate-200">

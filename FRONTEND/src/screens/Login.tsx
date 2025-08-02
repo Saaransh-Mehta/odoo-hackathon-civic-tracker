@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
+import type { UserRole } from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
@@ -8,7 +9,8 @@ const Login = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    role: 'user' as UserRole
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -69,7 +71,8 @@ const Login = () => {
       const userData = {
         id: Math.random().toString(36).substr(2, 9),
         name: formData.name || formData.email.split('@')[0],
-        email: formData.email
+        email: formData.email,
+        role: formData.role
       };
 
       login(userData);
@@ -87,7 +90,8 @@ const Login = () => {
       name: '',
       email: '',
       password: '',
-      confirmPassword: ''
+      confirmPassword: '',
+      role: 'user'
     });
     setError('');
   };
@@ -102,7 +106,8 @@ const Login = () => {
       const demoUser = {
         id: 'demo-user-123',
         name: 'Demo User',
-        email: 'demo@civictracker.com'
+        email: 'demo@civictracker.com',
+        role: 'user' as const
       };
 
       login(demoUser);
@@ -247,7 +252,7 @@ const Login = () => {
                   ) : (
                     <>
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       Try Demo Account
                     </>

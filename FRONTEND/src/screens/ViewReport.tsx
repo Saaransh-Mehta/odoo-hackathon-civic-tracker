@@ -231,7 +231,7 @@ const ViewReport = () => {
           </div>
 
           <button
-            onClick={() => navigate('/add-report')}
+            onClick={() => navigate('/report')}
             className="flex items-center space-x-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 
-interface User {
+export type UserRole = 'user' | 'admin';
+
+export interface User {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 interface AuthState {
@@ -11,9 +14,11 @@ interface AuthState {
   isLoggedIn: boolean;
   login: (userData: User) => void;
   logout: () => void;
+  isAdmin: () => boolean;
+  hasRole: (role: UserRole) => boolean;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoggedIn: false,
 
@@ -28,4 +33,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       isLoggedIn: false,
     })),
+
+  isAdmin: () => {
+    const { user } = get();
+    return user?.role === 'admin';
+  },
+
+  hasRole: (role: UserRole) => {
+    const { user } = get();
+    return user?.role === role;
+  },
 }));
