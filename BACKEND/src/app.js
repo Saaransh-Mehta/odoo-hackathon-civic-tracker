@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import cors from 'cors'
 import dotenv from 'dotenv'
 import Post from "./models/Post.models.js";
-// import router from "./routes/User.routes.js";
+import router from "./router/User.router.js";
 
 let app = express();
 dotenv.config()
@@ -18,10 +18,7 @@ app.use(json({limit:'20kb'}))
 app.use(cookieParser())
 
 
-app.get("/",async(req,res)=>{
-   
-})
-// app.use("/api/v1",router)
+app.use("/api/v1",router)
 
 
 
