@@ -1,6 +1,7 @@
 import User from "../models/User.models.js";
 import Post from "../models/Post.models.js";
 import cloudinary from "../utils/cloudinary.js";
+import {getDistanceInMeters} from "../utils/helperFunc.js"
 
 const register = async (req, res) => {
   try {
@@ -84,7 +85,7 @@ const login = async (req,res)=>{
 
 const createPost = async (req, res) => {
   try {
-    const { title, description, category, status, lat, lng } = req.body;
+    const { title, description, category, status, lat, lng, isAnonymous } = req.body;
 
     if (!req.files || !req.files.image)
       return res.status(401).json({message: "Image is required"}); 
@@ -109,7 +110,8 @@ const createPost = async (req, res) => {
       category,
       status: status || "open",
       image: result.secure_url,
-      author: req.user._id, 
+      author: req.user._id,
+      isAnonymous: isAnonymous || false,
       location: {
         type: "Point",
         coordinates: [parseFloat(lng), parseFloat(lat)],
@@ -131,6 +133,53 @@ const createPost = async (req, res) => {
   }
 };
 
+const getPost = async (req, res) => {
+  try {
+    const {
+      lat,
+      lng,
+      category = "All Categories",
+      status = "All Status",
+      distance = "All Distances"
+    } = req.query;
 
+    if (!lat || !lng) {
+      return res.status(400).json({ message: "Latitude and Longitude are required." });
+    }
 
-export { register, login, createPost };
+    const query = {
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [parseFloat(lng), parseFloat(lat)],
+          },
+          $maxDistance: getDistanceInMeters(distance),
+        },
+      },
+    };
+
+    if (category !== "All Categories") {
+      query.category = category;
+    }
+
+    if (status !== "All Status") {
+      query.status = status
+    }
+
+    const posts = await Post.find(query).populate("author", "-password");
+
+    res.status(200).json({
+      success: true,
+      count: posts.length,
+      posts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error,
+      message: error.message,
+    });
+  }
+};
+
+export { register, login, createPost ,getPost};

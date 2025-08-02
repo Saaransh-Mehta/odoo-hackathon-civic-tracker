@@ -51,6 +51,10 @@ const postSchema = new Schema(
         required: true,
       },
     },
+    isAnonymous: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
