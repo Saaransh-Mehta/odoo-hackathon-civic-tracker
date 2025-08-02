@@ -15,6 +15,10 @@ const postSchema = new Schema(
       ref: "User",
       required: true,
     },
+    image: {
+      type: String,
+      required: true,
+    },
     category: {
       type: String,
       required: true,
@@ -40,7 +44,7 @@ const postSchema = new Schema(
         type: String,
         enum: ["Point"],
         required: true,
-        default: "Point"
+        default: "Point",
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
@@ -52,7 +56,6 @@ const postSchema = new Schema(
     timestamps: true,
   }
 );
-
 
 postSchema.index({ location: "2dsphere" });
 

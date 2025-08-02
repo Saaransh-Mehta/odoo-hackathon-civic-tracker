@@ -1,4 +1,6 @@
 import User from "../models/User.models.js";
+import Post from "../models/Post.models.js";
+import cloudinary from "../utils/cloudinary.js";
 
 const register = async (req, res) => {
   try {
@@ -80,4 +82,55 @@ const login = async (req,res)=>{
 }
 
 
-export { register ,login};
+const createPost = async (req, res) => {
+  try {
+    const { title, description, category, status, lat, lng } = req.body;
+
+    if (!req.files || !req.files.image)
+      return res.status(401).json({message: "Image is required"}); 
+
+    if (!title || !description || !category )
+     return res.status(401).json({message: "All feilds are required"}); 
+
+    if (!lat || !lng)
+      return res.status(401).json({message: "Required Location Access"}); 
+
+
+    const result = await cloudinary.uploader.upload(
+      req.files.image.tempFilePath,
+      {
+        folder: "civic-tracker/posts",
+      }
+    );
+
+    const newPost = await Post.create({
+      title,
+      description,
+      category,
+      status: status || "open",
+      image: result.secure_url,
+      author: req.user._id, 
+      location: {
+        type: "Point",
+        coordinates: [parseFloat(lng), parseFloat(lat)],
+      },
+    });
+
+
+    await User.findByIdAndUpdate(req.user._id, {
+      $set: { post: newPost._id },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Post created successfully",
+      post: newPost,
+    });
+  } catch (error) {
+     res.status(500).json({error,message: error.message});
+  }
+};
+
+
+
+export { register, login, createPost };
