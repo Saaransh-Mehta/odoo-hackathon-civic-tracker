@@ -50,15 +50,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </Link>
                   
                   <Link
-                    to="/issues"
+                    to="/my-reports"
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      location.pathname === "/issues" 
+                      location.pathname === "/my-reports" 
                         ? "bg-slate-800 text-white shadow-sm" 
                         : "text-slate-600 hover:text-slate-800 hover:bg-slate-100"
                     }`}
                   >
-                    View Issues
+                    My Reports
                   </Link>
+                  
+                 
 
                   <div className="ml-4 pl-4 border-l border-slate-200">
                     <button
